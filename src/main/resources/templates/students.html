@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Sinh Viên - Full CRUD</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-4">
+    <div class="container">
+        <h2 class="text-primary text-center mb-4">HỆ THỐNG QUẢN LÝ SINH VIÊN</h2>
+
+        <!-- Form Thêm / Ô Tìm kiếm -->
+        <div class="row g-3 mb-4">
+            <!-- Form Thêm Sinh Viên -->
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">Thêm Sinh Viên Mới</div>
+                    <div class="card-body">
+                        <form id="addStudentForm" class="row g-2">
+                            <div class="col-md-4">
+                                <input type="text" id="addCode" class="form-control" placeholder="Mã SV" required>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" id="addName" class="form-control" placeholder="Họ và tên" required>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="email" id="addEmail" class="form-control" placeholder="Email" required>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" id="addPhone" class="form-control" placeholder="Số điện thoại">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" id="addClass" class="form-control" placeholder="Lớp">
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-success w-100"> Thêm mới</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ô Tìm Kiếm -->
+            <div class="col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-secondary text-white">Tìm Kiếm Sinh Viên</div>
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <div class="input-group">
+                            <input type="text" id="searchInput" class="form-control" placeholder="Nhập tên, mã SV, email...">
+                            <button class="btn btn-outline-secondary" type="button" onclick="searchStudents()">Tìm</button>
+                            <button class="btn btn-outline-dark" type="button" onclick="clearSearch()">Tải lại</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bảng Danh Sách Sinh Viên -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">Danh Sách Sinh Viên</div>
+            <div class="card-body p-0">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Mã SV</th>
+                            <th>Họ và tên</th>
+                            <th>Email</th>
+                            <th>Số điện thoại</th>
+                            <th>Lớp</th>
+                            <th class="text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody">
+                        <!-- Dữ liệu JS render ở đây -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cập Nhật (Sửa) Sinh Viên -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">Cập Nhật Thông Tin Sinh Viên</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editStudentForm">
+                        <input type="hidden" id="editId">
+                        <div class="mb-3">
+                            <label class="form-label">Mã SV</label>
+                            <input type="text" id="editCode" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Họ và tên</label>
+                            <input type="text" id="editName" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="editEmail" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Số điện thoại</label>
+                            <input type="text" id="editPhone" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Lớp</label>
+                            <input type="text" id="editClass" class="form-control">
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100">Lưu thay đổi</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const API_URL = '/api/students';
+        let editModal;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            editModal = new bootstrap.Modal(document.getElementById('editModal'));
+            loadStudents();
+
+            document.getElementById('addStudentForm').addEventListener('submit', addStudent);
+            document.getElementById('editStudentForm').addEventListener('submit', updateStudent);
+        });
+
+        // 1. Lấy tất cả sinh viên hoặc Tìm kiếm theo ?keyword=
+        function loadStudents() {
+            const keyword = document.getElementById('searchInput').value.trim();
+            let url = API_URL;
+            if (keyword) {
+                url += `?keyword=${encodeURIComponent(keyword)}`;
+            }
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => renderTable(data))
+                .catch(err => console.error('Lỗi khi tải danh sách:', err));
+        }
+
+        function searchStudents() {
+            loadStudents();
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            loadStudents();
+        }
+
+        // Render dữ liệu bảng
+        function renderTable(students) {
+            let html = '';
+            if (!students || students.length === 0) {
+                html = `<tr><td colspan="6" class="text-center text-muted">Không tìm thấy sinh viên nào</td></tr>`;
+            } else {
+                students.forEach(sv => {
+                    html += `
+                        <tr>
+                            <td><b>${sv.studentCode || ''}</b></td>
+                            <td>${sv.fullName || ''}</td>
+                            <td>${sv.email || ''}</td>
+                            <td>${sv.phone || ''}</td>
+                            <td>${sv.className || ''}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-warning me-1" onclick="openEditModal('${sv.id}', '${sv.studentCode}', '${sv.fullName}', '${sv.email}', '${sv.phone}', '${sv.className}')">Sửa</button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteStudent('${sv.id}')">Xóa</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+            document.getElementById('studentTableBody').innerHTML = html;
+        }
+
+        // 2. Thêm Sinh Viên
+        function addStudent(e) {
+            e.preventDefault();
+            const studentData = {
+                studentCode: document.getElementById('addCode').value,
+                fullName: document.getElementById('addName').value,
+                email: document.getElementById('addEmail').value,
+                phone: document.getElementById('addPhone').value,
+                className: document.getElementById('addClass').value
+            };
+
+            fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(studentData)
+            })
+            .then(res => {
+                if (res.ok) {
+                    document.getElementById('addStudentForm').reset();
+                    loadStudents();
+                } else {
+                    alert('Lỗi khi thêm mới!');
+                }
+            });
+        }
+
+        // 3. Mở Modal Sửa
+        function openEditModal(id, code, name, email, phone, className) {
+            document.getElementById('editId').value = id;
+            document.getElementById('editCode').value = (code && code !== 'null') ? code : '';
+            document.getElementById('editName').value = (name && name !== 'null') ? name : '';
+            document.getElementById('editEmail').value = (email && email !== 'null') ? email : '';
+            document.getElementById('editPhone').value = (phone && phone !== 'null') ? phone : '';
+            document.getElementById('editClass').value = (className && className !== 'null') ? className : '';
+            editModal.show();
+        }
+
+        // 4. Cập Nhật Sinh Viên
+        function updateStudent(e) {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const studentData = {
+                studentCode: document.getElementById('editCode').value,
+                fullName: document.getElementById('editName').value,
+                email: document.getElementById('editEmail').value,
+                phone: document.getElementById('editPhone').value,
+                className: document.getElementById('editClass').value
+            };
+
+            fetch(`${API_URL}/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(studentData)
+            })
+            .then(res => {
+                if (res.ok) {
+                    editModal.hide();
+                    loadStudents();
+                } else {
+                    alert('Lỗi khi cập nhật!');
+                }
+            });
+        }
+
+        // 5. Xóa Sinh Viên
+        function deleteStudent(id) {
+            if (confirm('Bạn có chắc chắn muốn xóa sinh viên này?')) {
+                fetch(`${API_URL}/${id}`, { method: 'DELETE' })
+                    .then(res => {
+                        if (res.ok) {
+                            loadStudents();
+                        } else {
+                            alert('Lỗi khi xóa!');
+                        }
+                    });
+            }
+        }
+    </script>
+</body>
+</html>
